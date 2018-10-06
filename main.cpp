@@ -5,6 +5,9 @@
 
 #include <SFML/Graphics.hpp>
 
+#define RESOLUTION_X 3000
+#define RESOLUTION_Y 2000
+
 /* ##################################
 *   Bereich -2 < x < 1
 *           -1 < y < 1
@@ -20,35 +23,24 @@ struct complexNumber
     std::string complexZ;
 };
 
+//Function prototypes
 int** Create();
-complexNumber Calculate(complexNumber z, complexNumber point, int counter, int *iterationsTillAbort);
 float ComplexAbs(complexNumber z);
-
-sf::Image CreateImage(int **matrix);
+complexNumber Calculate(complexNumber z, complexNumber point, int counter, int *iterationsTillAbort);
+sf::Sprite CreateSprite(int **matrix);
 
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Mandelbrotmenge");
 
     //Create the mandelbrot set and an image to render it
-    int **matrix = Create();
-    
-    sf::Image image = CreateImage(matrix);    
-
-    sf::Texture texture;
-    texture.loadFromImage(image);
-    sf::Sprite sprite;
-    sprite.setTexture(texture);
-    sprite.setScale(sf::Vector2f(0.54f, 0.54f));
-    sprite.setPosition(150, 0);
+    sf::Sprite sprite = CreateSprite(Create());    
 
     while(window.isOpen())
     {
         window.clear();
-
         //Draw everything here
         window.draw(sprite);
-
         window.display();
 
         sf::Event event;
@@ -66,22 +58,23 @@ int** Create()
 {
     //Create matrix 
     int **matrix;
-    matrix = new int*[3000];
-    for (unsigned int i = 0; i < 3000; i++)
+    matrix = new int*[RESOLUTION_X];
+    for (unsigned int i = 0; i < RESOLUTION_X; i++)
     {
-        matrix[i] = new int[2000];
+        matrix[i] = new int[RESOLUTION_Y];
     }
 
     //Iterate through the whoer matrix
-    for (int y = -1000; y < 1000; y++)
+    for (int y = -(RESOLUTION_Y / 2.0); y < (RESOLUTION_Y / 2.0); y++)
     {
-        for (int x = -2000; x < 1000; x++)
+        for (int x = -(RESOLUTION_X / 1.5); x < (RESOLUTION_X / 3.0); x++)
         {
             //Create a point er z0s in the mandelbrot set
             complexNumber point;
-            point.rePart = static_cast<float>(x / 1000.0f);
-            point.imPart = static_cast<float>(y / 1000.0f);
+            point.rePart = static_cast<float>(x / (RESOLUTION_X / 3.0));
+            point.imPart = static_cast<float>(y / (RESOLUTION_Y / 2.0));
 
+            //Start with 0 at first
             complexNumber null;
             null.rePart = 0;
             null.imPart = 0;
@@ -91,12 +84,12 @@ int** Create()
             float resultAbs = ComplexAbs(Calculate(null, point, 0, iterationsTillAbort)); //If the absolute value after 20 iterations is smaller than 2, the number is in the mandelbrot set         
             if (resultAbs < 2.0)
             {
-                matrix[x + 2000][y + 1000] = 0;
+                matrix[x + static_cast<int>((RESOLUTION_X / 1.5))][y + (RESOLUTION_Y / 2)] = 0;
             }
             else                                                                        //Otherwise it's not
             {
                 //If the number is not in the mandelbrot set look how many iterations we had to do until the number went to high
-                matrix[x + 2000][y + 1000] = *iterationsTillAbort + 1;
+                matrix[x + static_cast<int>((RESOLUTION_X / 1.5))][y + (RESOLUTION_Y / 2)] = *iterationsTillAbort + 1;
             }
         }
     }  
@@ -116,6 +109,7 @@ complexNumber Calculate(complexNumber z, complexNumber point, int counter, int* 
     result.rePart = result.rePart + point.rePart;
     result.imPart = result.imPart + point.imPart;
 
+    //If we did 20 iterations or the absolute value of the number is already to high -> exit the function
     if (counter == 20 || ComplexAbs(result) >= 2.0)
     {
         if (ComplexAbs(result) >= 2.0) //If the caculation stopped because the absolute value of the number is already to high, we need to remember how manny iterations we did, till the number went to high
@@ -131,16 +125,18 @@ complexNumber Calculate(complexNumber z, complexNumber point, int counter, int* 
 
 float ComplexAbs(complexNumber z)
 {
-    return sqrt(pow(z.rePart, 2) + pow(z.imPart, 2));
+    return sqrt(pow(z.rePart, 2) + pow(z.imPart, 2));       //Return the absolute value of the complex number
 }
 
-sf::Image CreateImage(int **matrix)
+sf::Sprite CreateSprite(int **matrix)
 {
+    //Create a image which can be rendered
     sf::Image image;
-    image.create(3000, 2000);
-    for (unsigned int y = 0; y < 2000; y++)
+    image.create(RESOLUTION_X, RESOLUTION_Y);
+
+    for (unsigned int y = 0; y < RESOLUTION_Y; y++) //Go through the whole matrix
     {
-        for (unsigned int x = 0; x < 3000; x++)
+        for (unsigned int x = 0; x < RESOLUTION_X; x++)
         {
             if (matrix[x][y] == 0)      //If the number is in the mandelbrotset
             {
@@ -156,5 +152,19 @@ sf::Image CreateImage(int **matrix)
         }
     }
 
-    return image;
+    //Save to file
+    image.saveToFile("Mandelbrotset.jpg");
+
+    //Create texture and sprite
+    sf::Texture *texture = new sf::Texture;
+    texture->loadFromImage(image);
+    sf::Sprite sprite;
+    sprite.setTexture(*texture);
+    sprite.setScale(sf::Vector2f(0.54, 0.54));
+    sprite.setPosition(150, 0);
+
+    sf::Vector2f scale((3000.0 / RESOLUTION_X) * 0.54, (2000.0 / RESOLUTION_Y) * 0.54);
+    sprite.setScale(scale);
+
+    return sprite;
 }
