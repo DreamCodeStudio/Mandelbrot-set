@@ -21,40 +21,26 @@ struct complexNumber
 };
 
 int** Create();
-complexNumber Calculate(complexNumber z, complexNumber point, int counter);
+complexNumber Calculate(complexNumber z, complexNumber point, int counter, int *iterationsTillAbort);
 float ComplexAbs(complexNumber z);
+
+sf::Image CreateImage(int **matrix);
 
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Mandelbrotmenge");
 
     //Create the mandelbrot set and an image to render it
-    std::cout << "Creating..." << std::endl;
     int **matrix = Create();
-    std::cout << "Finished!" << std::endl;
     
-    sf::Image image;
-    image.create(3000, 2000);
-    for (unsigned int y = 0; y < 2000; y++)
-    {
-        for (unsigned int x = 0; x < 3000; x++)
-        {
-            if (matrix[x][y] == 1)
-            {
-                image.setPixel(x, y, sf::Color(0, 0, 0));
-            }
-            else
-            {
-                image.setPixel(x, y, sf::Color(255, 255, 255));
-            }
-        }
-    }
+    sf::Image image = CreateImage(matrix);    
 
     sf::Texture texture;
     texture.loadFromImage(image);
     sf::Sprite sprite;
     sprite.setTexture(texture);
-    sprite.setScale(sf::Vector2f(0.5f, 0.5f));
+    sprite.setScale(sf::Vector2f(0.54f, 0.54f));
+    sprite.setPosition(150, 0);
 
     while(window.isOpen())
     {
@@ -100,16 +86,17 @@ int** Create()
             null.rePart = 0;
             null.imPart = 0;
 
-            complexNumber result = Calculate(null, point, 0);
-            float resultAbs = ComplexAbs(result);
-            
+            int *iterationsTillAbort = new int; //If a number is NOT in the mandelbrot set, the amount of iteration it has taken to find this out is stored here 
+
+            float resultAbs = ComplexAbs(Calculate(null, point, 0, iterationsTillAbort)); //If the absolute value after 20 iterations is smaller than 2, the number is in the mandelbrot set         
             if (resultAbs < 2.0)
             {
-                matrix[x + 2000][y + 1000] = 1;
-            }
-            else
-            {
                 matrix[x + 2000][y + 1000] = 0;
+            }
+            else                                                                        //Otherwise it's not
+            {
+                //If the number is not in the mandelbrot set look how many iterations we had to do until the number went to high
+                matrix[x + 2000][y + 1000] = *iterationsTillAbort + 1;
             }
         }
     }  
@@ -117,7 +104,7 @@ int** Create()
     return matrix;
 }
 
-complexNumber Calculate(complexNumber z, complexNumber point, int counter)
+complexNumber Calculate(complexNumber z, complexNumber point, int counter, int* iterationsTillAbort)
 {
     complexNumber result;
 
@@ -129,15 +116,45 @@ complexNumber Calculate(complexNumber z, complexNumber point, int counter)
     result.rePart = result.rePart + point.rePart;
     result.imPart = result.imPart + point.imPart;
 
-    if (counter == 20)
+    if (counter == 20 || ComplexAbs(result) >= 2.0)
     {
+        if (ComplexAbs(result) >= 2.0) //If the caculation stopped because the absolute value of the number is already to high, we need to remember how manny iterations we did, till the number went to high
+        {
+            *iterationsTillAbort = counter;
+        }
+
         return result;
     }
 
-    return Calculate(result, point, counter + 1);
+    return Calculate(result, point, counter + 1, iterationsTillAbort);
 }
 
 float ComplexAbs(complexNumber z)
 {
     return sqrt(pow(z.rePart, 2) + pow(z.imPart, 2));
+}
+
+sf::Image CreateImage(int **matrix)
+{
+    sf::Image image;
+    image.create(3000, 2000);
+    for (unsigned int y = 0; y < 2000; y++)
+    {
+        for (unsigned int x = 0; x < 3000; x++)
+        {
+            if (matrix[x][y] == 0)      //If the number is in the mandelbrotset
+            {
+                image.setPixel(x, y, sf::Color(0, 0, 0));
+            }
+            else
+            {
+                int redValue = matrix[x][y] * 9;
+                image.setPixel(x, y, sf::Color(redValue, 0, 0));
+            }
+                     
+
+        }
+    }
+
+    return image;
 }
