@@ -91,6 +91,8 @@ int** Create()
                 //If the number is not in the mandelbrot set look how many iterations we had to do until the number went to high
                 matrix[x + static_cast<int>((RESOLUTION_X / 1.5))][y + (RESOLUTION_Y / 2)] = *iterationsTillAbort + 1;
             }
+
+            delete iterationsTillAbort;
         }
     }  
 
